@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Биткоин Кликер</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Segoe UI',Roboto,Arial,sans-serif;
+  min-height:100vh;
+  background:radial-gradient(1200px 800px at 70% -10%, #2b1a05 0%, #0d0b09 55%, #070604 100%);
+  color:#f5ead8;
+  display:flex;
+  overflow:hidden;
+}
+.main{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;position:relative;min-width:0;
+}
+.stats{display:flex;gap:24px;margin-bottom:6px;flex-wrap:wrap;justify-content:center}
+.stat{text-align:center}
+.stat .label{font-size:12px;color:#b8956a;letter-spacing:1px;text-transform:uppercase}
+.stat .value{font-size:24px;font-weight:700;color:#ffb347;text-shadow:0 0 18px rgba(255,163,42,.45)}
+#balance{font-size:42px;font-weight:800;color:#ffd76a;text-shadow:0 0 24px rgba(255,154,0,.55);margin:6px 0 2px}
+#nickDisplay{font-size:13px;color:#e8c07a;margin-bottom:2px;font-weight:600}
+#connStatus{font-size:11px;color:#7a9a6a;margin-bottom:2px}
+.level-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:2px}
+#levelInfo{font-size:14px;font-weight:700;color:#ffd76a;letter-spacing:.5px}
+.level-bar{
+  width:260px;height:10px;border-radius:6px;background:#1e150a;border:1px solid #3b2c16;overflow:hidden;
+}
+.level-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#f7931a,#ffd76a);border-radius:6px;transition:width .3s}
+.level-bar-label{font-size:11px;color:#b8956a}
+#coin{
+  width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%, #ffdd7a 0%, #f7931a 55%, #a55c00 100%);
+  border:8px solid #e08a12;
+  box-shadow:0 0 0 6px rgba(255,170,40,.15),0 0 60px rgba(255,150,0,.5), inset 0 -12px 24px rgba(0,0,0,.35), inset 0 10px 20px rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;user-select:none;position:relative;margin-top:14px;
+  transition:transform .08s;
+}
+#coin:hover{transform:scale(1.03)}
+#coin:active{transform:scale(.94);box-shadow:0 0 0 6px rgba(255,170,40,.25),0 0 80px rgba(255,150,0,.75), inset 0 -12px 24px rgba(0,0,0,.35), inset 0 10px 20px rgba(255,255,255,.35)}
+#coin .btc{font-size:120px;font-weight:900;color:#fff;text-shadow:0 5px 12px rgba(0,0,0,.45);line-height:1}
+#coin .shine{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,0) 42%);
+}
+.hint{color:#a98a5e;margin-top:16px;font-size:14px}
+.float-num{position:absolute;font-weight:800;color:#7bed4f;font-size:22px;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.8);animation:floatUp 1s ease-out forwards;z-index:10}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-110px) scale(1.3)}}
+.panel{
+  width:320px;background:rgba(20,15,8,.85);border-left:1px solid #3a2b16;
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.panel h2{padding:16px 18px 12px;font-size:15px;letter-spacing:1px;color:#e8c07a;text-transform:uppercase;border-bottom:1px solid #2c2112}
+.upgrades{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.upgrades::-webkit-scrollbar{width:8px}
+.upgrades::-webkit-scrollbar-thumb{background:#3d2f1b;border-radius:4px}
+.upgrade{
+  background:linear-gradient(180deg,#241a0d,#1a1308);border:1px solid #3b2c16;border-radius:10px;
+  padding:10px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:transform .1s,border-color .15s;
+}
+.upgrade:hover{transform:translateY(-1px);border-color:#b8791f}
+.upgrade.buyable{border-color:#6b4a14;background:linear-gradient(180deg,#2c2010,#1f170a)}
+.upgrade.locked{opacity:.45;cursor:not-allowed}
+.upgrade .icon{
+  width:44px;height:44px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;color:#1a1005;background:linear-gradient(145deg,#ffd76a,#f7931a);
+}
+.upgrade .info{flex:1;min-width:0}
+.upgrade .name{font-size:14px;font-weight:700;color:#f0ddbc}
+.upgrade .desc{font-size:12px;color:#a98a5e;margin-top:2px}
+.upgrade .cost{margin-top:4px;font-size:12px;font-weight:700;color:#ffb347}
+.upgrade .owned{font-size:11px;color:#6f8f5f;margin-top:2px}
+.footer{padding:12px;border-top:1px solid #2c2112;display:flex;flex-wrap:wrap;gap:8px}
+.footer button{
+  background:#241a0d;border:1px solid #3b2c16;color:#a98a5e;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;flex:1;
+}
+.footer button:hover{color:#ffb347;border-color:#6b4a14}
+.footer button.primary{background:linear-gradient(145deg,#6b4a14,#4a320c);color:#ffd76a;border-color:#b8791f}
+#toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-80px);background:#1e150a;border:1px solid #b8791f;color:#ffd76a;padding:10px 18px;border-radius:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5);transition:transform .3s;z-index:100}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;
+}
+.overlay.show{display:flex}
+.modal{
+  background:linear-gradient(180deg,#221807,#151006);border:1px solid #b8791f;border-radius:14px;
+  width:100%;max-width:460px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;
+}
+.modal h3{padding:16px 20px 6px;color:#ffd76a;font-size:18px;text-align:center;letter-spacing:1px}
+.modal .lb-mode{padding:0 20px 4px;font-size:12px;color:#a98a5e;text-align:center}
+.modal .lb-status{padding:0 20px 8px;font-size:11px;color:#7a9a6a;text-align:center;min-height:14px}
+.lb-table{flex:1;overflow-y:auto;padding:0 20px 16px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #2c2112;border-radius:8px}
+.lb-row.me{background:#2c2010;border:1px solid #6b4a14}
+.lb-row .place{width:26px;font-weight:800;text-align:center;color:#b8956a}
+.lb-row .place.gold{color:#ffd76a}
+.lb-row .place.silver{color:#cfd8e3}
+.lb-row .place.bronze{color:#e8a464}
+.lb-row .name{flex:1;font-weight:600;color:#f0ddbc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-row .lvl{font-size:11px;font-weight:700;color:#7a9a6a;background:#1e2a14;border:1px solid #33441f;border-radius:6px;padding:2px 6px;white-space:nowrap}
+.lb-row .score{font-weight:800;color:#ffb347;white-space:nowrap}
+.lb-row .clicks{font-size:11px;color:#a98a5e;white-space:nowrap}
+.lb-empty{text-align:center;color:#a98a5e;padding:30px 0;font-size:14px}
+.modal-actions{padding:14px 20px;border-top:1px solid #2c2112;display:flex;gap:10px}
+.modal-actions button{
+  flex:1;padding:10px;border-radius:9px;cursor:pointer;font-size:14px;font-weight:700;
+  background:#241a0d;border:1px solid #3b2c16;color:#a98a5e;
+}
+.modal-actions button.primary{background:linear-gradient(145deg,#6b4a14,#4a320c);color:#ffd76a;border-color:#b8791f}
+.modal-actions button:hover{color:#ffb347;border-color:#b8791f}
+#nickInput{
+  margin:10px 20px 4px;padding:12px 14px;border-radius:10px;font-size:16px;color:#ffd76a;
+  background:#1a1308;border:1px solid #6b4a14;outline:none;text-align:center;font-weight:700;
+}
+#nickInput:focus{border-color:#ffb347}
+.nick-note{text-align:center;color:#a98a5e;font-size:12px;padding:6px 20px 4px}
+@media (max-width:760px){
+  body{flex-direction:column;overflow:auto}
+  .main{padding:20px}
+  #coin{width:180px;height:180px}
+  #coin .btc{font-size:92px}
+  .panel{width:100%;border-left:none;border-top:1px solid #3a2b16}
+  .upgrades{max-height:300px}
+  #balance{font-size:32px}
+  .level-bar{width:200px}
+}
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="stats">
+    <div class="stat"><div class="label">За клик</div><div class="value" id="perClick">1</div></div>
+    <div class="stat"><div class="label">Кликов</div><div class="value" id="clicks">0</div></div>
+    <div class="stat"><div class="label">Опыт</div><div class="value" id="xpVal">0</div></div>
+  </div>
+  <div id="connStatus"></div>
+  <div id="nickDisplay">Игрок</div>
+  <div id="balance">0 ₿</div>
+  <div class="level-wrap">
+    <div id="levelInfo">Уровень 1 · Новичок</div>
+    <div class="level-bar"><div class="fill" id="levelFill"></div></div>
+    <div class="level-bar-label" id="levelProgress">0 / 100 опыта</div>
+  </div>
+  <div id="coin">
+    <span class="btc">₿</span>
+    <span class="shine"></span>
+  </div>
+  <div class="hint">Кликай по биткоину — зарабатывай монеты и опыт</div>
+</div>
+
+<aside class="panel">
+  <h2>Улучшения</h2>
+  <div class="upgrades" id="upgrades"></div>
+  <div class="footer">
+    <button id="lbBtn">🏆 Лидеры</button>
+    <button id="nickBtn">✏️ Ник</button>
+    <button id="resetBtn">Сброс</button>
+  </div>
+</aside>
+
+<!-- Окно ввода ника -->
+<div class="overlay" id="nickOverlay">
+  <div class="modal">
+    <h3>👤 Введи свой ник</h3>
+    <div class="lb-mode">Ник зафиксируется в общем рейтинге</div>
+    <input id="nickInput" maxlength="16" placeholder="Например: Сатоши" autocomplete="off">
+    <div class="nick-note">До 16 символов. При смене ника старый уходит из таблицы.</div>
+    <div class="modal-actions">
+      <button id="nickOk" class="primary">Играть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Таблица лидеров -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>🏆 Общий рейтинг всех игроков</h3>
+    <div class="lb-mode">Синхронизируется онлайн через Firebase</div>
+    <div class="lb-status" id="lbStatus"></div>
+    <div class="lb-table" id="lbTable"></div>
+    <div class="modal-actions">
+      <button id="lbClose">Закрыть</button>
+      <button id="lbRefresh">Обновить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+'use strict';
+// ============================================================
+//  БИТКОИН КЛИКЕР — общий онлайн-рейтинг через Firebase
+//  ВАЖНО: вставь ключи своего проекта Firebase ниже (см. инструкцию)
+// ============================================================
+
+// ============  FIREBASE CONFIG  ============
+// Вставь сюда apiKey и другие данные из консоли Firebase:
+// Console → Project settings → Web apps → Config
+const firebaseConfig = {
+  apiKey: "ВСТАВЬ_API_KEY",
+  authDomain: "ВСТАВЬ_authDomain",
+  projectId: "ВСТАВЬ_projectId",
+  storageBucket: "ВСТАВЬ_storageBucket",
+  messagingSenderId: "ВСТАВЬ_messagingSenderId",
+  appId: "ВСТАВЬ_appId"
+};
+// ============================================
+
+const UPGRADES=[
+  {name:'Усиленный клик',desc:'+1 BTC за клик',amount:1,baseCost:10,minLvl:1},
+  {name:'Золотая рука',desc:'+3 BTC за клик',amount:3,baseCost:80,minLvl:2},
+  {name:'Лазерный тап',desc:'+8 BTC за клик',amount:8,baseCost:500,minLvl:4},
+  {name:'Блокчейн-каскад',desc:'+20 BTC за клик',amount:20,baseCost:2500,minLvl:7},
+  {name:'Молот Сатоши',desc:'+55 BTC за клик',amount:55,baseCost:12000,minLvl:11},
+  {name:'Телепорт-тычок',desc:'+150 BTC за клик',amount:150,baseCost:60000,minLvl:16},
+  {name:'Квантовый тап',desc:'+400 BTC за клик',amount:400,baseCost:280000,minLvl:22},
+  {name:'Сингулярность',desc:'+1100 BTC за клик',amount:1100,baseCost:1.2e6,minLvl:30},
+  {name:'Импульс Халвинга',desc:'+3000 BTC за клик',amount:3000,baseCost:5.5e6,minLvl:40},
+  {name:'Большой взрыв',desc:'+8000 BTC за клик',amount:8000,baseCost:2.5e7,minLvl:52},
+  {name:'Длань Бога',desc:'+22000 BTC за клик',amount:22000,baseCost:1.1e8,minLvl:66},
+  {name:'Бесконечность',desc:'+60000 BTC за клик',amount:60000,baseCost:5e8,minLvl:80}
+];
+const TITLES=[
+  [1,'Новичок'],[2,'Любопытный'],[4,'Кликер'],[7,'Умелец'],[11,'Майнер'],
+  [16,'Трейдер'],[22,'Кит'],[30,'Магнат'],[40,'Легенда'],[52,'Властелин BTC'],
+  [66,'Крипто-бог'],[80,'Сатоши Накамото'],[100,'Бесконечность']
+];
+const SAVE_KEY='bitcoinClickerSave_v9';
+const LB_KEY='bitcoinClickerLocalLB_v9';
+const GROWTH=1.16;
+
+let state={btc:0,perClick:1,clicks:0,totalEarned:0,xp:0,counts:{},nickname:''};
+let els={};
+let lbLocal=[];
+let levelCache={};
+
+// Firebase state
+let db=null;
+let onlineOk=false;
+let unsubListener=null;
+
+// ---------- Хранение ----------
+function load(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(raw) state=Object.assign(state,JSON.parse(raw));
+    const lbRaw=localStorage.getItem(LB_KEY);
+    if(lbRaw) lbLocal=JSON.parse(lbRaw);
+  }catch(e){}
+}
+function save(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}
+}
+
+// ---------- Система уровней ----------
+function xpForLevel(L){ return Math.floor(50*Math.pow(L,1.45)); }
+function levelInfo(xp){
+  let level=1, cum=0, need=0;
+  while(true){
+    need=xpForLevel(level);
+    if(xp>=cum+need){ cum+=need; level++; if(level>1000) break; }
+    else break;
+  }
+  const base=cum;
+  const next=base+need;
+  const into=xp-base;
+  const prog=need>0?Math.min(1,into/need):1;
+  return {level, into, need, prog, cum, totalToNext:next};
+}
+function titleFor(level){
+  let title='Новичок';
+  for(const t of TITLES){ if(level>=t[0]) title=t[1]; }
+  return title;
+}
+function lvlOfScore(score){ return levelInfo(score).level; }
+
+// ---------- Форматирование ----------
+function fmt(n){
+  n=Math.floor(n);
+  if(n<1000) return String(n);
+  const units=[['K',1e3],['M',1e6],['B',1e9],['T',1e12],['Qa',1e15],['Qi',1e18],['Sx',1e21]];
+  for(let i=units.length-1;i>=0;i--){
+    const m=units[i][1];
+    if(n>=m){
+      const v=n/m;
+      return (v>=100? v.toFixed(0) : v>=10? v.toFixed(1) : v.toFixed(2))+' '+units[i][0];
+    }
+  }
+  return String(n);
+}
+function costOf(i){ return Math.floor(UPGRADES[i].baseCost*Math.pow(GROWTH,state.counts[i]||0)); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Отрисовка ----------
+function render(){
+  const li=levelInfo(state.xp);
+  els.balance.textContent=fmt(state.btc)+' ₿';
+  els.perClick.textContent=fmt(state.perClick);
+  els.clicks.textContent=String(state.clicks);
+  els.xpVal.textContent=fmt(state.xp);
+  els.nickDisplay.textContent='👤 '+escapeHtml(state.nickname||'Игрок');
+  els.levelInfo.textContent='Уровень '+li.level+' · '+titleFor(li.level);
+  els.levelFill.style.width=Math.round(li.prog*100)+'%';
+  els.levelProgress.textContent=fmt(li.into)+' / '+fmt(li.need)+' опыта';
+  document.querySelectorAll('.upgrade').forEach(el=>{
+    const i=Number(el.dataset.idx);
+    const cost=costOf(i);
+    const owned=state.counts[i]||0;
+    const noLvl=li.level<UPGRADES[i].minLvl;
+    el.querySelector('.cost').textContent='Цена: '+fmt(cost)+' ₿';
+    el.querySelector('.owned').textContent=owned>0?'Куплено: '+owned:(noLvl?'Нужен ур. '+UPGRADES[i].minLvl:'Куплено: 0');
+    el.classList.toggle('locked',state.btc<cost||noLvl);
+    el.classList.toggle('buyable',state.btc>=cost&&owned===0&&!noLvl);
+  });
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+function addFloat(x,y,text){
+  const el=document.createElement('div');
+  el.className='float-num';
+  el.textContent=text;
+  el.style.left=x+'px';
+  el.style.top=y+'px';
+  document.querySelector('.main').appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+// ============================================================
+//  FIREBASE — общий рейтинг
+// ============================================================
+function connectFirebase(){
+  try{
+    if(!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('ВСТАВЬ')===0){
+      setConn('⚠️ Firebase не настроен. Вставь ключи в файл.');
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    onlineOk=true;
+    setConn('🟢 Онлайн-рейтинг подключён');
+    // Реально-временное слушание таблицы (обновляется автоматически)
+    unsubListener=db.collection('leaderboard')
+      .orderBy('score','desc')
+      .limit(50)
+      .onSnapshot(snap=>{
+        lbOnline=[];
+        snap.forEach(doc=>{ lbOnline.push(doc.data()); });
+        if(lbOpen) renderLB();
+        pushMyScore();
+      }, err=>{
+        console.warn('Firestore listen error',err);
+      });
+  }catch(e){
+    console.warn('Firebase init error',e);
+    setConn('⚠️ Ошибка Firebase: '+e.message);
+  }
+}
+function setConn(msg){ if(els.conn) els.conn.textContent=msg; }
+
+let lbOnline=[];
+
+// ---------- Отправка моего результата в общий рейтинг ----------
+let lastSentScore=-1;
+function pushMyScore(force){
+  if(!db || !onlineOk || !state.nickname) return;
+  if(state.btc<=0) return; // при 0 ничего не рейтингуем
+  const score=Math.floor(state.btc);
+  if(!force && score<=lastSentScore) return;
+  const ref=db.collection('leaderboard').doc(encodeURIComponent(state.nickname));
+  ref.set({
+    name:state.nickname,
+    score:score,
+    clicks:state.clicks,
+    level:levelInfo(state.xp).level,
+    updated:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(()=>{
+    lastSentScore=score;
+    setConn('🟢 Онлайн-рейтинг подключён · синхронизировано');
+  }).catch(err=>{
+    console.warn('push error',err);
+  });
+}
+
+// ---------- Удаление ника при смене ника / сбросе ----------
+function removeMyScore(){
+  if(!db || !onlineOk || !state.nickname) return;
+  db.collection('leaderboard').doc(encodeURIComponent(state.nickname)).delete().catch(()=>{});
+}
+
+// ---------- Таблица лидеров (общий онлайн) ----------
+let lbOpen=false;
+function openLB(){
+  document.getElementById('overlay').classList.add('show');
+  lbOpen=true;
+  renderLB();
+}
+function closeLB(){
+  lbOpen=false;
+  document.getElementById('overlay').classList.remove('show');
+}
+function renderLB(){
+  const box=document.getElementById('lbTable');
+  const status=document.getElementById('lbStatus');
+  const medals=['gold','silver','bronze'];
+  if(onlineOk && db){
+    status.textContent='🟢 Живой рейтинг всех игроков · обновляется сам';
+  }else{
+    status.textContent='⚠️ Firebase не настроен — показана локальная таблица';
+  }
+  if(onlineOk && db){
+    if(!lbOnline.length){
+      box.innerHTML='<div class="lb-empty">Пока пусто. Твой ник появится здесь после кликов и подключения Firebase.</div>';
+      return;
+    }
+    box.innerHTML='';
+    lbOnline.forEach((e,i)=>{
+      const row=document.createElement('div');
+      row.className='lb-row'+(e.name===state.nickname?' me':'');
+      const medal=i<3?medals[i]:'';
+      row.innerHTML=
+        '<div class="place '+medal+'">'+(i<3?['🥇','🥈','🥉'][i]:String(i+1))+'</div>'+
+        '<div class="name">'+escapeHtml(e.name)+(e.name===state.nickname?' (ты)':'')+'</div>'+
+        '<div class="lvl">ур. '+(e.level||lvlOfScore(e.score))+'</div>'+
+        '<div class="score">'+fmt(e.score)+' ₿</div>'+
+        '<div class="clicks">'+(e.clicks||0)+' кл.</div>';
+      box.appendChild(row);
+    });
+  }else{
+    if(!lbLocal.length){
+      box.innerHTML='<div class="lb-empty">Пока пусто.</div>';
+      return;
+    }
+    box.innerHTML='';
+    lbLocal.forEach((e,i)=>{
+      const row=document.createElement('div');
+      row.className='lb-row'+(e.name===state.nickname?' me':'');
+      const medal=i<3?medals[i]:'';
+      row.innerHTML=
+        '<div class="place '+medal+'">'+(i<3?['🥇','🥈','🥉'][i]:String(i+1))+'</div>'+
+        '<div class="name">'+escapeHtml(e.name)+(e.name===state.nickname?' (ты)':'')+'</div>'+
+        '<div class="lvl">ур. '+lvlOfScore(e.score)+'</div>'+
+        '<div class="score">'+fmt(e.score)+' ₿</div>'+
+        '<div class="clicks">'+e.clicks+' кл.</div>';
+      box.appendChild(row);
+    });
+  }
+}
+
+// ---------- Локальный резерв для офлайна ----------
+function updateLocalLB(){
+  if(!state.nickname) return;
+  if(state.btc<=0){
+    const idx=lbLocal.findIndex(e=>e.name===state.nickname);
+    if(idx>=0){ lbLocal.splice(idx,1); }
+  }else{
+    const idx=lbLocal.findIndex(e=>e.name===state.nickname);
+    if(idx>=0) lbLocal[idx]={name:state.nickname,score:state.btc,clicks:state.clicks};
+    else lbLocal.push({name:state.nickname,score:state.btc,clicks:state.clicks});
+  }
+  lbLocal.sort((a,b)=>b.score-a.score);
+  lbLocal=lbLocal.slice(0,50);
+  try{localStorage.setItem(LB_KEY,JSON.stringify(lbLocal));}catch(e){}
+}
+
+// ---------- Игровая логика ----------
+function onCoinClick(e){
+  state.btc+=state.perClick;
+  state.totalEarned+=state.perClick;
+  state.xp+=Math.max(1,Math.floor(state.perClick));
+  state.clicks++;
+  const li=levelInfo(state.xp);
+  if(levelCache.level!==undefined && li.level>levelCache.level){
+    showToast('⬆️ Новый уровень '+li.level+'! Ты — '+titleFor(li.level)+'!');
+  }
+  levelCache={level:li.level};
+  const main=document.querySelector('.main');
+  const r=main.getBoundingClientRect();
+  addFloat(e.clientX-r.left, e.clientY-r.top, '+'+fmt(state.perClick)+' ₿');
+  render();
+  save();
+  schedulePush();
+}
+function buy(i){
+  const cost=costOf(i);
+  const li=levelInfo(state.xp);
+  if(state.btc<cost||li.level<UPGRADES[i].minLvl) return;
+  state.btc-=cost;
+  state.counts[i]=(state.counts[i]||0)+1;
+  state.perClick+=UPGRADES[i].amount;
+  updateLocalLB();
+  schedulePush();
+  render();
+  save();
+}
+function buildPanel(){
+  const wrap=document.getElementById('upgrades');
+  UPGRADES.forEach((up,i)=>{
+    const el=document.createElement('div');
+    el.className='upgrade';
+    el.dataset.idx=String(i);
+    el.innerHTML=
+      '<div class="icon">К</div>'+
+      '<div class="info">'+
+        '<div class="name">'+up.name+(up.minLvl>1?' <span style="font-size:10px;color:#7a9a6a">· ур. '+up.minLvl+'</span>':'')+'</div>'+
+        '<div class="desc">'+up.desc+'</div>'+
+        '<div class="cost"></div>'+
+        '<div class="owned"></div>'+
+      '</div>';
+    el.addEventListener('click',()=>buy(i));
+    wrap.appendChild(el);
+  });
+}
+let pushTimer=null;
+function schedulePush(){
+  updateLocalLB();
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>pushMyScore(false),1500);
+}
+
+// ---------- Ввод / смена ника ----------
+function showNickModal(prefill){
+  const input=document.getElementById('nickInput');
+  input.value=prefill||'';
+  document.getElementById('nickOverlay').classList.add('show');
+  setTimeout(()=>input.focus(),50);
+}
+function hideNickModal(){
+  document.getElementById('nickOverlay').classList.remove('show');
+}
+function applyNick(){
+  const input=document.getElementById('nickInput');
+  const v=input.value.trim().slice(0,16);
+  if(!v){ input.style.borderColor='#c0392b'; showToast('Введи ник!'); return; }
+  // Удаляем старый ник из общего рейтинга
+  if(state.nickname && db) removeMyScore();
+  state.nickname=v;
+  save();
+  hideNickModal();
+  updateLocalLB();
+  schedulePush();
+  render();
+  showToast('Привет, '+escapeHtml(v)+'!');
+}
+
+// ---------- Старт ----------
+load();
+buildPanel();
+els={
+  balance:document.getElementById('balance'),
+  perClick:document.getElementById('perClick'),
+  clicks:document.getElementById('clicks'),
+  xpVal:document.getElementById('xpVal'),
+  nickDisplay:document.getElementById('nickDisplay'),
+  conn:document.getElementById('connStatus'),
+  levelInfo:document.getElementById('levelInfo'),
+  levelFill:document.getElementById('levelFill'),
+  levelProgress:document.getElementById('levelProgress')
+};
+document.getElementById('coin').addEventListener('click',onCoinClick);
+document.getElementById('lbBtn').addEventListener('click',openLB);
+document.getElementById('lbRefresh').addEventListener('click',()=>{if(db)pushMyScore(true);renderLB();});
+document.getElementById('lbClose').addEventListener('click',closeLB);
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeLB();});
+document.getElementById('nickBtn').addEventListener('click',()=>showNickModal(state.nickname));
+document.getElementById('nickOk').addEventListener('click',applyNick);
+document.getElementById('nickInput').addEventListener('keydown',e=>{if(e.key==='Enter')applyNick();});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(confirm('Сбросить весь прогресс? (ник сохранится, запись из рейтинга уйдёт)')){
+    const keepNick=state.nickname;
+    if(db) removeMyScore();
+    state={btc:0,perClick:1,clicks:0,totalEarned:0,xp:0,counts:{},nickname:keepNick};
+    localStorage.removeItem(SAVE_KEY);
+    updateLocalLB();
+    render();
+    save();
+  }
+});
+
+render();
+save();
+connectFirebase();
+if(!state.nickname){
+  showNickModal('');
+}else{
+  updateLocalLB();
+}
+setInterval(save,3000);
+window.addEventListener('beforeunload',save);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) save(); });
+</script>
+</body>
+</html>
